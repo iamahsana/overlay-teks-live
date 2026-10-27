@@ -1,0 +1,98 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overlay Teks Live</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:Arial,sans-serif}
+body{background:#171717;color:white;padding:18px}
+#editor{max-width:500px;margin:auto}
+textarea,input,button{display:block;width:100%;padding:12px;margin:10px 0;border-radius:8px;font:inherit}
+textarea,input{background:#252525;color:white;border:1px solid #555}
+button{background:#16864b;color:white;border:0;font-weight:bold}
+#status{font-size:13px;color:#bbb}
+#stage{display:none}
+body.overlay{background:transparent!important;padding:0;overflow:hidden}
+body.overlay #editor{display:none}
+body.overlay #stage{display:block}
+#liveText{display:inline-block;padding:8px;color:white;font-weight:bold;font-size:36px;white-space:pre-wrap;overflow-wrap:anywhere;text-shadow:2px 2px 4px black,-1px -1px 2px black}
+</style>
+</head>
+<body>
+<section id="editor">
+<h2>Kontrol Overlay</h2>
+<label>Teks</label>
+<textarea id="txt" rows="3" maxlength="200">LIVE STREAM</textarea>
+<label>Ukuran teks (12–100 px)</label>
+<input id="size" type="number" min="12" max="100" value="36">
+<label>Warna teks</label>
+<input id="color" type="color" value="#ffffff">
+<button id="save">SIMPAN TEKS</button>
+<p id="status">Menghubungkan...</p>
+<p>URL overlay: tambahkan <b>?overlay=1</b> di akhir URL situs.</p>
+</section>
+<section id="stage"><div id="liveText">LIVE STREAM</div></section>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+const config={
+ apiKey:"AIzaSyBSVW8mKeMJwa47f-eMXrOb1w6kCWqOFk",
+ authDomain:"overlay-teks-live-f1f2a.firebaseapp.com",
+ databaseURL:"https://overlay-teks-live-f1f2a-default-rtdb.asia-southeast1.firebasedatabase.app",
+ projectId:"overlay-teks-live-f1f2a",
+ storageBucket:"overlay-teks-live-f1f2a.firebasestorage.app",
+ messagingSenderId:"38919719515",
+ appId:"1:38919719515:web:b59b7f0d34759fb0570d7e"
+};
+
+const isOverlay=new URLSearchParams(location.search).get("overlay")==="1";
+if(isOverlay) document.body.classList.add("overlay");
+
+const txt=document.getElementById("txt");
+const size=document.getElementById("size");
+const color=document.getElementById("color");
+const status=document.getElementById("status");
+const liveText=document.getElementById("liveText");
+const save=document.getElementById("save");
+
+firebase.initializeApp(config);
+const ref=firebase.database().ref("overlay");
+
+ref.on("value",snap=>{
+ const d=snap.val()||{};
+ liveText.textContent=typeof d.text==="string"?d.text:"LIVE STREAM";
+ liveText.style.fontSize=Math.max(12,Math.min(100,Number(d.size)||36))+"px";
+ liveText.style.color=/^#[0-9a-f]{6}$/i.test(d.color||"")?d.color:"#ffffff";
+ if(!isOverlay){
+  txt.value=typeof d.text==="string"?d.text:"LIVE STREAM";
+  size.value=d.size||36;
+  color.value=d.color||"#ffffff";
+  status.textContent="Terhubung. Overlay diperbarui otomatis.";
+ }
+},err=>{
+ if(!isOverlay) status.textContent="Gagal membaca database: "+err.message;
+});
+
+save.onclick=async()=>{
+ save.disabled=true;
+ status.textContent="Menyimpan...";
+ try{
+  await ref.set({
+   text:txt.value.slice(0,200),
+   size:Math.max(12,Math.min(100,Number(size.value)||36)),
+   color:color.value
+  });
+  status.textContent="Tersimpan!";
+ }catch(e){
+  status.textContent="Gagal menyimpan. Periksa Firebase Rules dan koneksi.";
+ }finally{
+  save.disabled=false;
+ }
+};
+</script>
+</body>
+</html>
